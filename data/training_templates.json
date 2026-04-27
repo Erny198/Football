@@ -1,0 +1,22 @@
+{
+  "templates": [
+    {
+      "theme": "build_up",
+      "title": "Выход от ворот",
+      "recommended": [
+        "rondo_4v1",
+        "build_up_4plus1_vs2",
+        "build_up_4plus1_vs3"
+      ]
+    },
+    {
+      "theme": "standards",
+      "title": "Стандарты",
+      "recommended": [
+        "throw_in_third_player",
+        "corner_short_rest_defence",
+        "free_kick_decision"
+      ]
+    }
+  ]
+}

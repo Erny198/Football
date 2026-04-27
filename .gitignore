@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+coach_journal.json
+exports/
+*.sqlite3
+.DS_Store
