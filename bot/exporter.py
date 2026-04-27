@@ -1,11 +1,6 @@
-from pathlib import Path
 from datetime import datetime
 
-def journal_to_markdown(rows: list[dict], user_id: int) -> Path:
-    export_dir = Path("exports")
-    export_dir.mkdir(exist_ok=True)
-    path = export_dir / f"journal_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-
+def journal_to_markdown(rows: list[dict], user_id: int) -> tuple[bytes, str]:
     lines = ["# Журнал выводов тренера", ""]
     for row in rows[::-1]:
         payload = row.get("payload", {})
@@ -14,5 +9,6 @@ def journal_to_markdown(rows: list[dict], user_id: int) -> Path:
             lines.append(f"- **{k}:** {v}")
         lines.append("")
 
-    path.write_text("\n".join(lines), encoding="utf-8")
-    return path
+    content = "\n".join(lines).encode("utf-8")
+    filename = f"journal_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+    return content, filename

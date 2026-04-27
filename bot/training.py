@@ -16,7 +16,12 @@ THEME_LABELS = {
 }
 
 def build_training_plan(age: str, mode: str, theme: str, duration: str) -> str:
-    exercises = content.get_exercises_by_theme(theme)
+    by_theme = content.get_exercises_by_theme(theme)
+    exercises = [e for e in by_theme if age in e.get("age", [])]
+    if not exercises:
+        exercises = by_theme
+    if not exercises:
+        exercises = [e for e in content.exercises()["exercises"] if age in e.get("age", [])]
     if not exercises:
         exercises = content.exercises()["exercises"][:3]
 

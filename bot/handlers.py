@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import random
 from telegram import Update
 from telegram.ext import (
     ContextTypes, CommandHandler, CallbackQueryHandler, ConversationHandler,
@@ -43,21 +45,27 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def principles_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return
+    if update.callback_query:
+        await update.callback_query.answer()
     chunks = []
     for p in content.principles()["principles"]:
         chunks.append(f"• {p['name']}\nРежим: {p['mode_label']}\nДетям: {p['child_explanation']}\nКоманды: {', '.join(p['commands'])}")
-    await update.message.reply_text("\n\n".join(chunks))
+    await update.effective_message.reply_text("\n\n".join(chunks))
 
 async def exercises_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return
+    if update.callback_query:
+        await update.callback_query.answer()
     rows = content.exercises()["exercises"]
     text = "Библиотека упражнений:\n\n"
     for e in rows:
         text += f"• {e['name']} — {e['goal']}\n"
-    await update.message.reply_text(text[:3900])
+    await update.effective_message.reply_text(text[:3900])
 
 async def standards_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return
+    if update.callback_query:
+        await update.callback_query.answer()
     rows = [e for e in content.exercises()["exercises"] if "standards" in e.get("tags", [])]
     parts = ["⚽ Стандарты 4+1"]
     for e in rows:
@@ -68,36 +76,40 @@ async def standards_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Структурная интенсивность: {e['arteta_focus']}\n"
             f"Команды: {', '.join(e['commands'])}"
         )
-    await update.message.reply_text("\n\n".join(parts)[:3900])
+    await update.effective_message.reply_text("\n\n".join(parts)[:3900])
 
 async def journal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return
+    if update.callback_query:
+        await update.callback_query.answer()
     storage = context.application.bot_data["storage"]
     rows = storage.list_for_user(update.effective_user.id, limit=10)
     if not rows:
-        await update.message.reply_text("Журнал пока пуст. Начни с /pre_match, /post_match или /case.")
+        await update.effective_message.reply_text("Журнал пока пуст. Начни с /pre_match, /post_match или /case.")
         return
     parts = ["📓 Последние записи:"]
     for r in rows:
         p = r["payload"]
         title = p.get("goal") or p.get("conclusion") or p.get("case_title") or p.get("theme") or "запись"
         parts.append(f"• {r['entry_type']}: {title}")
-    await update.message.reply_text("\n".join(parts))
+    await update.effective_message.reply_text("\n".join(parts))
 
 async def export_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return
     storage = context.application.bot_data["storage"]
     rows = storage.list_for_user(update.effective_user.id, limit=100)
     if not rows:
-        await update.message.reply_text("Нечего экспортировать: журнал пуст.")
+        await update.effective_message.reply_text("Нечего экспортировать: журнал пуст.")
         return
-    path = journal_to_markdown(rows, update.effective_user.id)
-    await update.message.reply_document(document=path.open("rb"), filename=path.name, caption="Экспорт журнала в Markdown")
+    data, filename = journal_to_markdown(rows, update.effective_user.id)
+    await update.effective_message.reply_document(document=io.BytesIO(data), filename=filename, caption="Экспорт журнала в Markdown")
 
 async def training_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return ConversationHandler.END
+    if update.callback_query:
+        await update.callback_query.answer()
     context.user_data["training"] = {}
-    await update.message.reply_text("Для какого возраста собрать тренировку?", reply_markup=age_menu("tr_age"))
+    await update.effective_message.reply_text("Для какого возраста собрать тренировку?", reply_markup=age_menu("tr_age"))
     return TR_AGE
 
 async def training_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -133,8 +145,10 @@ async def training_duration(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def case_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return ConversationHandler.END
+    if update.callback_query:
+        await update.callback_query.answer()
     context.user_data["case"] = {}
-    await update.message.reply_text("Выбери тему кейса:", reply_markup=theme_menu("case_theme"))
+    await update.effective_message.reply_text("Выбери тему кейса:", reply_markup=theme_menu("case_theme"))
     return CASE_THEME
 
 async def case_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -142,7 +156,7 @@ async def case_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     theme = q.data.split(":")[1]
     cases = content.get_cases_by_theme(theme) or content.cases()["cases"]
-    case = cases[0]
+    case = random.choice(cases)
     context.user_data["case"] = {"theme": theme, "case_title": case["title"], "situation": case["situation"]}
     await q.message.reply_text(f"Кейс: {case['title']}\n\n{case['situation']}\n\nЧто ты заметил как главную проблему?")
     return CASE_NOTICE
@@ -175,8 +189,10 @@ async def case_conclusion(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def pre_match_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return ConversationHandler.END
+    if update.callback_query:
+        await update.callback_query.answer()
     context.user_data["pre_match"] = {}
-    await update.message.reply_text("Какая одна учебная цель на матч? Не результат, а что хочешь увидеть.")
+    await update.effective_message.reply_text("Какая одна учебная цель на матч? Не результат, а что хочешь увидеть.")
     return PRE_GOAL
 
 async def pre_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -218,8 +234,10 @@ async def pre_progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_match_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context): return ConversationHandler.END
+    if update.callback_query:
+        await update.callback_query.answer()
     context.user_data["post_match"] = {}
-    await update.message.reply_text("Какая была цель матча?")
+    await update.effective_message.reply_text("Какая была цель матча?")
     return POST_GOAL
 
 async def post_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -259,7 +277,11 @@ async def post_praise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Диалог остановлен.", reply_markup=main_menu())
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text("Диалог остановлен.", reply_markup=main_menu())
+    else:
+        await update.message.reply_text("Диалог остановлен.", reply_markup=main_menu())
     return ConversationHandler.END
 
 async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -267,8 +289,6 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     cmd = q.data.replace("cmd:", "")
-    fake_update = Update(update.update_id, message=q.message)
-    fake_update._effective_user = update.effective_user
     mapping = {
         "principles": principles_cmd,
         "exercises": exercises_cmd,
@@ -276,19 +296,14 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "journal": journal_cmd,
     }
     if cmd in mapping:
-        await mapping[cmd](fake_update, context)
-    elif cmd == "training":
-        await q.message.reply_text("Напиши /training, чтобы собрать тренировку.")
-    elif cmd == "case":
-        await q.message.reply_text("Напиши /case, чтобы пройти кейс.")
-    elif cmd == "pre_match":
-        await q.message.reply_text("Напиши /pre_match перед матчем.")
-    elif cmd == "post_match":
-        await q.message.reply_text("Напиши /post_match после матча.")
+        await mapping[cmd](update, context)
 
 def build_handlers():
     pre_conv = ConversationHandler(
-        entry_points=[CommandHandler("pre_match", pre_match_start)],
+        entry_points=[
+            CommandHandler("pre_match", pre_match_start),
+            CallbackQueryHandler(pre_match_start, pattern=r"^cmd:pre_match$"),
+        ],
         states={
             PRE_GOAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, pre_goal)],
             PRE_MODE: [CallbackQueryHandler(pre_mode_callback, pattern=r"^pre_mode:")],
@@ -298,11 +313,14 @@ def build_handlers():
             PRE_NOT_REQUIRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, pre_not_require)],
             PRE_PROGRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, pre_progress)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
     )
 
     post_conv = ConversationHandler(
-        entry_points=[CommandHandler("post_match", post_match_start)],
+        entry_points=[
+            CommandHandler("post_match", post_match_start),
+            CallbackQueryHandler(post_match_start, pattern=r"^cmd:post_match$"),
+        ],
         states={
             POST_GOAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_goal)],
             POST_WORKED: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_worked)],
@@ -312,11 +330,14 @@ def build_handlers():
             POST_NEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_next)],
             POST_PRAISE: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_praise)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
     )
 
     case_conv = ConversationHandler(
-        entry_points=[CommandHandler("case", case_start)],
+        entry_points=[
+            CommandHandler("case", case_start),
+            CallbackQueryHandler(case_start, pattern=r"^cmd:case$"),
+        ],
         states={
             CASE_THEME: [CallbackQueryHandler(case_theme, pattern=r"^case_theme:")],
             CASE_NOTICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, case_notice)],
@@ -325,18 +346,21 @@ def build_handlers():
             CASE_FOCUS: [MessageHandler(filters.TEXT & ~filters.COMMAND, case_focus)],
             CASE_CONCLUSION: [MessageHandler(filters.TEXT & ~filters.COMMAND, case_conclusion)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
     )
 
     training_conv = ConversationHandler(
-        entry_points=[CommandHandler("training", training_start)],
+        entry_points=[
+            CommandHandler("training", training_start),
+            CallbackQueryHandler(training_start, pattern=r"^cmd:training$"),
+        ],
         states={
             TR_AGE: [CallbackQueryHandler(training_age, pattern=r"^tr_age:")],
             TR_MODE: [CallbackQueryHandler(training_mode, pattern=r"^tr_mode:")],
             TR_THEME: [CallbackQueryHandler(training_theme, pattern=r"^tr_theme:")],
             TR_DURATION: [CallbackQueryHandler(training_duration, pattern=r"^tr_duration:")],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
     )
 
     return [

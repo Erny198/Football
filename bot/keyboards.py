@@ -1,5 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+_CANCEL = [InlineKeyboardButton("❌ Отмена", callback_data="cancel")]
+
 def main_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎯 Принципы", callback_data="cmd:principles")],
@@ -17,6 +19,7 @@ def mode_menu(prefix: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("Позиционный контроль", callback_data=f"{prefix}:guardiola")],
         [InlineKeyboardButton("Структурная интенсивность", callback_data=f"{prefix}:arteta")],
         [InlineKeyboardButton("Смешанный режим", callback_data=f"{prefix}:mixed")],
+        _CANCEL,
     ])
 
 def theme_menu(prefix: str) -> InlineKeyboardMarkup:
@@ -28,13 +31,16 @@ def theme_menu(prefix: str) -> InlineKeyboardMarkup:
         ("Компактная оборона", "compact_defence"),
         ("Стандарты", "standards"),
     ]
-    return InlineKeyboardMarkup([[InlineKeyboardButton(label, callback_data=f"{prefix}:{key}")] for label, key in themes])
+    rows = [[InlineKeyboardButton(label, callback_data=f"{prefix}:{key}")] for label, key in themes]
+    rows.append(_CANCEL)
+    return InlineKeyboardMarkup(rows)
 
 def age_menu(prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("10–11", callback_data=f"{prefix}:10-11")],
         [InlineKeyboardButton("12–13", callback_data=f"{prefix}:12-13")],
         [InlineKeyboardButton("14", callback_data=f"{prefix}:14")],
+        _CANCEL,
     ])
 
 def duration_menu(prefix: str) -> InlineKeyboardMarkup:
@@ -42,4 +48,5 @@ def duration_menu(prefix: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("45 минут", callback_data=f"{prefix}:45")],
         [InlineKeyboardButton("60 минут", callback_data=f"{prefix}:60")],
         [InlineKeyboardButton("75 минут", callback_data=f"{prefix}:75")],
+        _CANCEL,
     ])
