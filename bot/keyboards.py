@@ -35,13 +35,6 @@ def theme_menu(prefix: str) -> InlineKeyboardMarkup:
     rows.append(_CANCEL)
     return InlineKeyboardMarkup(rows)
 
-def age_menu(prefix: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("10–11", callback_data=f"{prefix}:10-11")],
-        [InlineKeyboardButton("12–13", callback_data=f"{prefix}:12-13")],
-        [InlineKeyboardButton("14", callback_data=f"{prefix}:14")],
-        _CANCEL,
-    ])
 
 def duration_menu(prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([

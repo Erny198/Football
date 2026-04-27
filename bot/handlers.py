@@ -8,14 +8,14 @@ from telegram.ext import (
     MessageHandler, filters
 )
 from . import content
-from .keyboards import main_menu, mode_menu, theme_menu, age_menu, duration_menu
+from .keyboards import main_menu, mode_menu, theme_menu, duration_menu
 from .training import build_training_plan
 from .exporter import journal_to_markdown
 
 PRE_GOAL, PRE_MODE, PRE_PRINCIPLE, PRE_PHASE, PRE_COMMANDS, PRE_NOT_REQUIRE, PRE_PROGRESS = range(7)
 POST_GOAL, POST_WORKED, POST_NOT_WORKED, POST_REASON, POST_CONCLUSION, POST_NEXT, POST_PRAISE = range(7, 14)
 CASE_THEME, CASE_NOTICE, CASE_PRINCIPLE, CASE_EXERCISE, CASE_FOCUS, CASE_CONCLUSION = range(14, 20)
-TR_AGE, TR_MODE, TR_THEME, TR_DURATION = range(20, 24)
+TR_MODE, TR_THEME, TR_DURATION = range(20, 23)
 
 async def guard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     settings = context.application.bot_data["settings"]
@@ -109,14 +109,7 @@ async def training_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         await update.callback_query.answer()
     context.user_data["training"] = {}
-    await update.effective_message.reply_text("Для какого возраста собрать тренировку?", reply_markup=age_menu("tr_age"))
-    return TR_AGE
-
-async def training_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    context.user_data["training"]["age"] = q.data.split(":")[1]
-    await q.message.reply_text("Выбери режим:", reply_markup=mode_menu("tr_mode"))
+    await update.effective_message.reply_text("Выбери режим тренировки:", reply_markup=mode_menu("tr_mode"))
     return TR_MODE
 
 async def training_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -138,7 +131,7 @@ async def training_duration(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     context.user_data["training"]["duration"] = q.data.split(":")[1]
     tr = context.user_data["training"]
-    plan = build_training_plan(tr["age"], tr["mode"], tr["theme"], tr["duration"])
+    plan = build_training_plan(tr["mode"], tr["theme"], tr["duration"])
     context.application.bot_data["storage"].add(update.effective_user.id, "training_plan", tr | {"plan": plan})
     await q.message.reply_text(plan[:3900])
     return ConversationHandler.END
@@ -355,7 +348,6 @@ def build_handlers():
             CallbackQueryHandler(training_start, pattern=r"^cmd:training$"),
         ],
         states={
-            TR_AGE: [CallbackQueryHandler(training_age, pattern=r"^tr_age:")],
             TR_MODE: [CallbackQueryHandler(training_mode, pattern=r"^tr_mode:")],
             TR_THEME: [CallbackQueryHandler(training_theme, pattern=r"^tr_theme:")],
             TR_DURATION: [CallbackQueryHandler(training_duration, pattern=r"^tr_duration:")],

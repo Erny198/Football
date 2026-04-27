@@ -15,7 +15,7 @@ THEME_LABELS = {
     "standards": "Стандарты",
 }
 
-def build_training_plan(age: str, mode: str, theme: str, duration: str) -> str:
+def build_training_plan(mode: str, theme: str, duration: str) -> str:
     exercises = content.get_exercises_by_theme(theme)
     if not exercises:
         exercises = content.exercises()["exercises"][:4]
@@ -44,7 +44,6 @@ def build_training_plan(age: str, mode: str, theme: str, duration: str) -> str:
 
     lines = [
         f"🧠 Тренировка {duration} мин",
-        f"Возраст: {age}",
         f"Режим: {mode_label}",
         f"Тема: {theme_label}",
         "",
