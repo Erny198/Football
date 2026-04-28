@@ -482,6 +482,8 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def build_handlers():
+    _fallbacks = [CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")]
+
     pre_conv = ConversationHandler(
         entry_points=[
             CommandHandler("pre_match", pre_match_start),
@@ -496,7 +498,8 @@ def build_handlers():
             PRE_NOT_REQUIRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, pre_not_require)],
             PRE_PROGRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, pre_progress)],
         },
-        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
+        fallbacks=_fallbacks,
+        allow_reentry=True,
     )
 
     post_conv = ConversationHandler(
@@ -513,7 +516,8 @@ def build_handlers():
             POST_NEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_next)],
             POST_PRAISE: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_praise)],
         },
-        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
+        fallbacks=_fallbacks,
+        allow_reentry=True,
     )
 
     case_conv = ConversationHandler(
@@ -529,7 +533,8 @@ def build_handlers():
             CASE_FOCUS: [MessageHandler(filters.TEXT & ~filters.COMMAND, case_focus)],
             CASE_CONCLUSION: [MessageHandler(filters.TEXT & ~filters.COMMAND, case_conclusion)],
         },
-        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
+        fallbacks=_fallbacks,
+        allow_reentry=True,
     )
 
     training_conv = ConversationHandler(
@@ -542,7 +547,8 @@ def build_handlers():
             TR_THEME: [CallbackQueryHandler(training_theme, pattern=r"^tr_theme:")],
             TR_DURATION: [CallbackQueryHandler(training_duration, pattern=r"^tr_duration:")],
         },
-        fallbacks=[CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
+        fallbacks=_fallbacks,
+        allow_reentry=True,
     )
 
     return [

@@ -1,8 +1,13 @@
 from __future__ import annotations
 import os
-from anthropic import AsyncAnthropic
 
-_client: AsyncAnthropic | None = None
+try:
+    from anthropic import AsyncAnthropic
+    _HAS_ANTHROPIC = True
+except ImportError:
+    _HAS_ANTHROPIC = False
+
+_client = None
 
 _SYSTEM = (
     "Ты методический помощник тренера по футболу. "
@@ -12,15 +17,15 @@ _SYSTEM = (
 )
 
 
-def _get_client() -> AsyncAnthropic:
+def _get_client():
     global _client
-    if _client is None:
+    if _client is None and _HAS_ANTHROPIC:
         _client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
     return _client
 
 
 async def coaching_tip(prompt: str) -> str | None:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    if not _HAS_ANTHROPIC or not os.environ.get("ANTHROPIC_API_KEY"):
         return None
     try:
         msg = await _get_client().messages.create(
