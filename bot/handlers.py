@@ -9,7 +9,7 @@ from telegram.ext import (
     MessageHandler, filters
 )
 from . import content
-from .keyboards import main_menu, mode_menu, theme_menu, duration_menu, exercise_nav
+from .keyboards import main_menu, mode_menu, theme_menu, duration_menu, exercise_nav, persistent_keyboard, MENU_BTN_TEXT
 from .training import build_training_plan
 from .exporter import journal_to_markdown
 from .ai import coaching_tip
@@ -63,11 +63,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"<b>Привет, тренер!</b>\n{_SEP}\n"
         "Я методический бот для формата <b>4+1</b>.\n\n"
-        "Помогаю выбрать фокус, упражнение и зафиксировать выводы — без оценок и баллов.\n\n"
-        "Выбери раздел:",
-        reply_markup=main_menu(),
+        "Помогаю выбрать фокус, упражнение и зафиксировать выводы — без оценок и баллов.",
+        reply_markup=persistent_keyboard(),
         parse_mode="HTML",
     )
+    await update.message.reply_text("Выбери раздел:", reply_markup=main_menu())
+
+
+async def menu_btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await guard(update, context):
+        return
+    await update.message.reply_text("Выбери раздел:", reply_markup=main_menu())
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -554,6 +560,7 @@ def build_handlers():
     return [
         CommandHandler("start", start),
         CommandHandler("help", help_cmd),
+        MessageHandler(filters.Text([MENU_BTN_TEXT]), menu_btn),
         CommandHandler("principles", principles_cmd),
         CommandHandler("exercises", exercises_cmd),
         CommandHandler("standards", standards_cmd),

@@ -1,6 +1,15 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 
 _CANCEL = [InlineKeyboardButton("❌ Отмена", callback_data="cancel")]
+
+MENU_BTN_TEXT = "📋 Меню"
+
+def persistent_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton(MENU_BTN_TEXT)]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
 
 
 def exercise_nav(idx: int, total: int) -> InlineKeyboardMarkup:
