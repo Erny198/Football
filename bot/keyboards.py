@@ -2,6 +2,16 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 _CANCEL = [InlineKeyboardButton("❌ Отмена", callback_data="cancel")]
 
+
+def exercise_nav(idx: int, total: int) -> InlineKeyboardMarkup:
+    prev_idx = (idx - 1) % total
+    next_idx = (idx + 1) % total
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("◀", callback_data=f"ex:{prev_idx}"),
+        InlineKeyboardButton(f"{idx + 1} / {total}", callback_data="noop"),
+        InlineKeyboardButton("▶", callback_data=f"ex:{next_idx}"),
+    ]])
+
 def main_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎯 Принципы", callback_data="cmd:principles")],
