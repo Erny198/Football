@@ -23,6 +23,8 @@ def exercise_nav(idx: int, total: int) -> InlineKeyboardMarkup:
 
 def main_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔵 Спросить Пепа", callback_data="cmd:pep"),
+         InlineKeyboardButton("🔴 Спросить Артету", callback_data="cmd:arteta")],
         [InlineKeyboardButton("🎯 Принципы", callback_data="cmd:principles")],
         [InlineKeyboardButton("🏃 Упражнения", callback_data="cmd:exercises")],
         [InlineKeyboardButton("⚽ Стандарты", callback_data="cmd:standards")],
@@ -32,6 +34,12 @@ def main_menu() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("📌 После матча", callback_data="cmd:post_match")],
         [InlineKeyboardButton("📓 Журнал", callback_data="cmd:journal")],
     ])
+
+
+def chat_end_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("❌ Завершить разговор", callback_data="chat:end"),
+    ]])
 
 def mode_menu(prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([

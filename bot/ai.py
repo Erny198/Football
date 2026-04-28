@@ -37,3 +37,19 @@ async def coaching_tip(prompt: str) -> str | None:
         return msg.content[0].text
     except Exception:
         return None
+
+
+async def persona_reply(system: str, history: list[dict], user_message: str) -> str | None:
+    if not _HAS_ANTHROPIC or not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        messages = history[-10:] + [{"role": "user", "content": user_message}]
+        msg = await _get_client().messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            system=system,
+            messages=messages,
+        )
+        return msg.content[0].text
+    except Exception:
+        return None

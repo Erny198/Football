@@ -9,15 +9,17 @@ from telegram.ext import (
     MessageHandler, filters
 )
 from . import content
-from .keyboards import main_menu, mode_menu, theme_menu, duration_menu, exercise_nav, persistent_keyboard, MENU_BTN_TEXT
+from .keyboards import main_menu, mode_menu, theme_menu, duration_menu, exercise_nav, persistent_keyboard, chat_end_kb, MENU_BTN_TEXT
 from .training import build_training_plan
 from .exporter import journal_to_markdown
-from .ai import coaching_tip
+from .ai import coaching_tip, persona_reply
+from .personas import PERSONAS
 
 PRE_GOAL, PRE_MODE, PRE_PRINCIPLE, PRE_PHASE, PRE_COMMANDS, PRE_NOT_REQUIRE, PRE_PROGRESS = range(7)
 POST_GOAL, POST_WORKED, POST_NOT_WORKED, POST_REASON, POST_CONCLUSION, POST_NEXT, POST_PRAISE = range(7, 14)
 CASE_THEME, CASE_NOTICE, CASE_PRINCIPLE, CASE_EXERCISE, CASE_FOCUS, CASE_CONCLUSION = range(14, 20)
 TR_MODE, TR_THEME, TR_DURATION = range(20, 23)
+CHAT_ACTIVE = 23
 
 _SEP = "──────────────"
 _e = _html.escape
@@ -456,6 +458,65 @@ async def post_praise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+async def chat_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await guard(update, context):
+        return ConversationHandler.END
+    q = update.callback_query
+    await q.answer()
+    persona_key = q.data.split(":")[1]
+    persona = PERSONAS[persona_key]
+    context.user_data["chat"] = {"persona": persona_key, "history": []}
+    icon = "🔵" if persona_key == "pep" else "🔴"
+    await q.message.reply_text(
+        f"{icon} <b>{_e(persona['name'])}</b>\n{_SEP}\n{_e(persona['greeting'])}",
+        parse_mode="HTML",
+        reply_markup=chat_end_kb(),
+    )
+    return CHAT_ACTIVE
+
+
+async def chat_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.text == MENU_BTN_TEXT:
+        context.user_data.pop("chat", None)
+        await update.message.reply_text("Выбери раздел:", reply_markup=main_menu())
+        return ConversationHandler.END
+
+    chat = context.user_data.get("chat", {})
+    persona_key = chat.get("persona", "pep")
+    persona = PERSONAS[persona_key]
+    history = chat.get("history", [])
+    icon = "🔵" if persona_key == "pep" else "🔴"
+
+    await update.message.reply_chat_action("typing")
+    reply = await persona_reply(persona["system"], history, update.message.text)
+
+    if reply is None:
+        await update.message.reply_text(
+            "⚠️ API недоступен. Добавь ANTHROPIC_API_KEY в переменные окружения.",
+            reply_markup=chat_end_kb(),
+        )
+        return CHAT_ACTIVE
+
+    history.append({"role": "user", "content": update.message.text})
+    history.append({"role": "assistant", "content": reply})
+    context.user_data["chat"]["history"] = history[-12:]
+
+    await update.message.reply_text(
+        f"{icon} <b>{_e(persona['name'])}:</b>\n\n{_e(reply)}",
+        parse_mode="HTML",
+        reply_markup=chat_end_kb(),
+    )
+    return CHAT_ACTIVE
+
+
+async def chat_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    context.user_data.pop("chat", None)
+    await q.message.reply_text("Разговор завершён.", reply_markup=main_menu())
+    return ConversationHandler.END
+
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         await update.callback_query.answer()
@@ -488,7 +549,27 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def build_handlers():
-    _fallbacks = [CommandHandler("cancel", cancel), CallbackQueryHandler(cancel, pattern=r"^cancel$")]
+    _fallbacks = [
+        CommandHandler("cancel", cancel),
+        CallbackQueryHandler(cancel, pattern=r"^cancel$"),
+    ]
+
+    chat_conv = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(chat_start, pattern=r"^cmd:(pep|arteta)$"),
+        ],
+        states={
+            CHAT_ACTIVE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, chat_message),
+                CallbackQueryHandler(chat_end, pattern=r"^chat:end$"),
+            ],
+        },
+        fallbacks=[
+            CallbackQueryHandler(chat_end, pattern=r"^chat:end$"),
+            CommandHandler("cancel", cancel),
+        ],
+        allow_reentry=True,
+    )
 
     pre_conv = ConversationHandler(
         entry_points=[
@@ -566,6 +647,7 @@ def build_handlers():
         CommandHandler("standards", standards_cmd),
         CommandHandler("journal", journal_cmd),
         CommandHandler("export", export_cmd),
+        chat_conv,
         pre_conv,
         post_conv,
         case_conv,
