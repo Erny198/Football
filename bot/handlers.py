@@ -70,7 +70,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(
         f"<b>Привет, тренер!</b>\n{_SEP}\n"
-        "Я методический бот для формата <b>4+1</b>.\n\n"
+        "Я методический бот.\n"
         "Помогаю выбрать фокус, упражнение и зафиксировать выводы — без оценок и баллов.",
         reply_markup=persistent_keyboard(),
         parse_mode="HTML",
