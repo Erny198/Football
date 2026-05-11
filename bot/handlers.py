@@ -9,8 +9,13 @@ from telegram.ext import (
     MessageHandler, filters
 )
 from . import content
-from .keyboards import main_menu, mode_menu, theme_menu, duration_menu, exercise_nav, persistent_keyboard, chat_end_kb, MENU_BTN_TEXT
+from .keyboards import (
+    main_menu, mode_menu, theme_menu, duration_menu, exercise_nav,
+    persistent_keyboard, chat_end_kb, MENU_BTN_TEXT,
+    formation_menu, build11_after_scheme, theme_menu_11, duration_menu_11,
+)
 from .training import build_training_plan
+from .training_11 import build_training_plan_11, get_scheme_text, get_scheme_41
 from .exporter import journal_to_markdown
 from .ai import coaching_tip, persona_reply
 from .personas import PERSONAS
@@ -20,6 +25,7 @@ POST_GOAL, POST_WORKED, POST_NOT_WORKED, POST_REASON, POST_CONCLUSION, POST_NEXT
 CASE_THEME, CASE_NOTICE, CASE_PRINCIPLE, CASE_EXERCISE, CASE_FOCUS, CASE_CONCLUSION = range(14, 20)
 TR_MODE, TR_THEME, TR_DURATION = range(20, 23)
 CHAT_ACTIVE = 23
+TR11_MODE, TR11_THEME, TR11_DURATION = range(24, 27)
 
 _SEP = "──────────────"
 _e = _html.escape
@@ -458,6 +464,70 @@ async def post_praise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+async def scheme41_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query:
+        await update.callback_query.answer()
+    await update.effective_message.reply_text(get_scheme_41(), parse_mode="HTML")
+
+
+async def scheme11_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query:
+        await update.callback_query.answer()
+    await update.effective_message.reply_text(
+        "Выбери схему 11 игроков:", reply_markup=formation_menu()
+    )
+
+
+async def scheme11_formation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    formation = q.data.split(":")[1]
+    text = get_scheme_text(formation)
+    await q.message.reply_text(
+        text, parse_mode="HTML", reply_markup=build11_after_scheme(formation)
+    )
+
+
+async def tr11_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    formation = q.data.split(":")[1]
+    context.user_data["tr11"] = {"formation": formation}
+    await q.message.reply_text(
+        f"Схема <b>{_e(formation)}</b> — выбери режим тренировки:",
+        parse_mode="HTML",
+        reply_markup=mode_menu("tr11_mode"),
+    )
+    return TR11_MODE
+
+
+async def tr11_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["tr11"]["mode"] = q.data.split(":")[1]
+    await q.message.reply_text("Выбери тему:", reply_markup=theme_menu_11("tr11_theme"))
+    return TR11_THEME
+
+
+async def tr11_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    context.user_data["tr11"]["theme"] = q.data.split(":")[1]
+    await q.message.reply_text("Выбери длительность:", reply_markup=duration_menu_11("tr11_dur"))
+    return TR11_DURATION
+
+
+async def tr11_duration(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    tr = context.user_data["tr11"]
+    tr["duration"] = q.data.split(":")[1]
+    plan = build_training_plan_11(tr["mode"], tr["formation"], tr["theme"], tr["duration"])
+    context.application.bot_data["storage"].add(update.effective_user.id, "training_plan", tr | {"plan": plan})
+    await q.message.reply_text(plan[:4090], parse_mode="HTML")
+    return ConversationHandler.END
+
+
 async def chat_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context):
         return ConversationHandler.END
@@ -543,6 +613,8 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "exercises": exercises_cmd,
         "standards": standards_cmd,
         "journal": journal_cmd,
+        "scheme41": scheme41_cmd,
+        "scheme11": scheme11_cmd,
     }
     if cmd in mapping:
         await mapping[cmd](update, context)
@@ -638,6 +710,17 @@ def build_handlers():
         allow_reentry=True,
     )
 
+    tr11_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(tr11_start, pattern=r"^tr11:")],
+        states={
+            TR11_MODE: [CallbackQueryHandler(tr11_mode, pattern=r"^tr11_mode:")],
+            TR11_THEME: [CallbackQueryHandler(tr11_theme, pattern=r"^tr11_theme:")],
+            TR11_DURATION: [CallbackQueryHandler(tr11_duration, pattern=r"^tr11_dur:")],
+        },
+        fallbacks=_fallbacks,
+        allow_reentry=True,
+    )
+
     return [
         CommandHandler("start", start),
         CommandHandler("help", help_cmd),
@@ -648,10 +731,12 @@ def build_handlers():
         CommandHandler("journal", journal_cmd),
         CommandHandler("export", export_cmd),
         chat_conv,
+        tr11_conv,
         pre_conv,
         post_conv,
         case_conv,
         training_conv,
+        CallbackQueryHandler(scheme11_formation, pattern=r"^scheme11:"),
         CallbackQueryHandler(exercises_navigate, pattern=r"^ex:\d+$"),
         CallbackQueryHandler(noop_callback, pattern=r"^noop$"),
         CallbackQueryHandler(callbacks, pattern=r"^cmd:"),
