@@ -84,6 +84,14 @@ async def menu_btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Выбери раздел:", reply_markup=main_menu())
 
 
+async def myid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    await update.message.reply_text(
+        f"Твой Telegram ID: <code>{user.id}</code>",
+        parse_mode="HTML",
+    )
+
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await guard(update, context):
         return
@@ -723,6 +731,7 @@ def build_handlers():
 
     return [
         CommandHandler("start", start),
+        CommandHandler("myid", myid_cmd),
         CommandHandler("help", help_cmd),
         MessageHandler(filters.Text([MENU_BTN_TEXT]), menu_btn),
         CommandHandler("principles", principles_cmd),
