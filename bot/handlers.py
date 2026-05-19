@@ -57,12 +57,25 @@ def _exercise_card_text(idx: int, exercises: list) -> tuple[str, object]:
 async def guard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     settings = context.application.bot_data["settings"]
     user = update.effective_user
-    if not settings.allowed_user_ids or (user and user.id in settings.allowed_user_ids):
+    if not user:
+        return False
+    # Безлимитный доступ: всегда пропускаем
+    if user.id in settings.free_user_ids:
+        return True
+    # Если белый список не задан — открытый доступ
+    if not settings.allowed_user_ids or user.id in settings.allowed_user_ids:
         return True
     target = update.message or (update.callback_query.message if update.callback_query else None)
     if target:
         await target.reply_text("Доступ к этому боту ограничен.")
     return False
+
+
+def is_free_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Проверка: пользователь с безлимитным доступом (для будущей системы подписок)."""
+    settings = context.application.bot_data["settings"]
+    user = update.effective_user
+    return bool(user and user.id in settings.free_user_ids)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
