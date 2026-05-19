@@ -54,15 +54,21 @@ def _exercise_card_text(idx: int, exercises: list) -> tuple[str, object]:
     return text, exercise_nav(idx, total)
 
 
+def _is_free(user, settings) -> bool:
+    if user.id in settings.free_user_ids:
+        return True
+    if user.username and user.username.lower() in settings.free_usernames:
+        return True
+    return False
+
+
 async def guard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     settings = context.application.bot_data["settings"]
     user = update.effective_user
     if not user:
         return False
-    # Безлимитный доступ: всегда пропускаем
-    if user.id in settings.free_user_ids:
+    if _is_free(user, settings):
         return True
-    # Если белый список не задан — открытый доступ
     if not settings.allowed_user_ids or user.id in settings.allowed_user_ids:
         return True
     target = update.message or (update.callback_query.message if update.callback_query else None)
@@ -72,10 +78,9 @@ async def guard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 
 def is_free_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Проверка: пользователь с безлимитным доступом (для будущей системы подписок)."""
     settings = context.application.bot_data["settings"]
     user = update.effective_user
-    return bool(user and user.id in settings.free_user_ids)
+    return bool(user and _is_free(user, settings))
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
